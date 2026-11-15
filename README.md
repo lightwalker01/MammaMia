@@ -1,3 +1,11 @@
+> [!IMPORTANT]
+> **Unofficial Docker publishing fork / Fork non ufficiale per la pubblicazione Docker.**
+> This fork of [UrloMythus/MammaMia](https://github.com/UrloMythus/MammaMia) exists solely to synchronize the original source and publish an up-to-date **linux/amd64** Docker image to GitHub Container Registry for self-hosting. It is **not affiliated with or endorsed by the upstream maintainers**. All application code and credits remain with the original project.
+>
+> Questo fork ha come **unico scopo** mantenere sincronizzati i sorgenti originali e pubblicare un container Docker aggiornato. Non è un fork di sviluppo e non intende sostituire il progetto originale.
+>
+> Image (after a successful build): `ghcr.io/lightwalker01/mammamia:latest`. [CasaOS Compose](compose.casaos.yml). Builds use the source retained in this fork, so they remain possible if upstream becomes unavailable. Images are not installed or updated automatically on CasaOS. A GitHub fork is not an independent external backup.
+
 
   
 

@@ -1,0 +1,23 @@
+name: mammamia
+
+services:
+  mammamia:
+    image: ghcr.io/lightwalker01/mammamia:latest
+    platform: linux/amd64
+    container_name: mammamia
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Europe/Rome
+      TMDB_KEY: ${TMDB_KEY:?Set TMDB_KEY in CasaOS or .env}
+    volumes:
+      - /DATA/AppData/mammamia/config.json:/app/config.json
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

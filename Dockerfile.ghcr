@@ -15,6 +15,9 @@ RUN python -m pip install --no-cache-dir -r requirements.txt pytesseract
 
 COPY . ./
 
+# Apply branding changes inside the image only; keep upstream files mergeable.
+RUN python3 /app/docker-assets/patch_branding.py
+
 # Keep the default config in the image and expose a stable path for persistent data.
 RUN mkdir -p /app/defaults /app/data \
     && cp /app/config.json /app/defaults/config.json \

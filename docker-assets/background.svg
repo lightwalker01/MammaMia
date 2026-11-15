@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+<!-- Self-contained replacement background: original Postimg asset was unavailable. -->
+<rect width="240" height="240" fill="#fff8e9"/>
+<g stroke="#db8f69" stroke-width="3" fill="none" opacity=".24" stroke-linecap="round">
+<circle cx="35" cy="39" r="17"/><path d="M23 36l12-10 13 11-13 13zM35 26v24M19 38h32"/>
+<path d="M110 19c-28 12-28 31 0 44 28-13 28-32 0-44zm0 2v41M93 35h34"/>
+<path d="M173 38q23-23 40 0-20 22-40 0zm20-15v30"/>
+<circle cx="40" cy="172" r="15"/><path d="M28 169l12-10 13 11-13 13z"/>
+<path d="M100 141q25-12 50 7-2 27-29 27-24-4-21-34zm3 2 42 28"/>
+<path d="M182 145q22-22 38 0-21 21-38 0z"/>
+<path d="M18 95q30-19 52 9M18 105q30-19 52 9M18 115q30-19 52 9"/>
+<path d="M180 200q26-16 48 7M180 210q26-16 48 7M180 220q26-16 48 7"/>
+</g></svg>

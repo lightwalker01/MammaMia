@@ -1,173 +1,173 @@
-# MammaMia — documentazione tecnica del fork Docker / CasaOS
+# MammaMia — Docker / CasaOS fork technical documentation
 
-> Stato: documentazione del fork `lightwalker01/MammaMia`, aggiornata al 15 novembre 2026. È un **fork di packaging non ufficiale**, non un fork funzionale. Il codice e l'idea dell'addon appartengono a [UrloMythus/MammaMia](https://github.com/UrloMythus/MammaMia). Questo documento permette di capire e ricostruire la distribuzione del container, ma non sostituisce i test runtime sul server.
+> Status: documentation for the `lightwalker01/MammaMia` fork, updated November 15, 2026. This is an **unofficial packaging fork**, not a functional fork. The application code and the add-on concept belong to [UrloMythus/MammaMia](https://github.com/UrloMythus/MammaMia). This document explains how to understand and reconstruct the container distribution; it does not replace runtime testing on the server.
 
-## 1. Obiettivi e confini
+## 1. Goals and scope
 
-- Conservare sul fork i sorgenti upstream (anche se il repository originale diventasse temporaneamente inaccessibile).
-- Sincronizzare gli aggiornamenti upstream una volta al giorno **senza force-push** e senza eliminare file personalizzati.
-- Costruire su GitHub Actions, pubblicare su `ghcr.io/lightwalker01/mammamia`, eseguire su CasaOS senza clone locale.
-- Supportare **soltanto linux/amd64**, preferendo una base minima compatibile rispetto a Alpine.
-- Non modificare in Git i file applicativi originali: personalizzazioni grafiche eseguite **solo durante la build**.
-- Mantenere `config.json` editabile e persistente in AppData, inizializzato automaticamente la prima volta.
-- L'addon non è offline: richieste a provider, TMDB, Kitsu, EPG ecc. continuano a richiedere Internet. Si ospitano localmente soltanto gli asset grafici generali dell'interfaccia.
+- Preserve the upstream source code in the fork (even if the original repository becomes temporarily unavailable).
+- Synchronize upstream updates once per day **without force-pushing** or removing custom files.
+- Build using GitHub Actions, publish to `ghcr.io/lightwalker01/mammamia`, and run on CasaOS without a local source checkout.
+- Support **linux/amd64 only**, preferring a small, compatible base image over Alpine.
+- Avoid modifying original application files in Git: visual customizations are applied **only at build time**.
+- Keep `config.json` editable and persistent in AppData, with automatic first-run initialization.
+- The add-on is not offline: calls to providers, TMDB, Kitsu, EPG services, etc. still require Internet access. Only the application's general interface graphics are hosted locally.
 
-## 2. Repository e componenti
+## 2. Repository layout and components
 
-| Percorso | Responsabilità |
+| Path | Responsibility |
 | --- | --- |
-| `Dockerfile.ghcr` | Build dell'immagine AMD64, dipendenze Python, Tesseract, predisposizione configurazione e patch di packaging |
-| `Dockerfile.ghcr.dockerignore` | Esclusioni dal contesto di build specifiche del Dockerfile |
-| `docker-entrypoint.sh` | Primo avvio: copia il config di default nel bind mount, senza sovrascrivere modifiche successive |
-| `docker-assets/patch_branding.py` | Riscrive, **nell'immagine**, i riferimenti alle immagini e il logo del manifest |
-| `docker-assets/pizza.png` | Icona della pizza storica, recuperata dall'utente tramite Wayback Machine e ridimensionata per il packaging |
-| `docker-assets/background.png` | Sfondo originale 800×800 recuperato dall'utente; derivato PNG 256×256 con palette a 3 colori per ridurre la dimensione dell'immagine. Si conserva il disegno originale, non la qualità originale |
-| `compose.casaos.yml` | Compose per CasaOS, con metadati `x-casaos`, bind mount e impostazioni |
-| `.github/workflows/sync-upstream.yml` | Fetch/merge giornaliero o manuale da upstream |
-| `.github/workflows/publish-ghcr.yml` | Build su PR; build + push GHCR dopo modifiche a main, dispatch o sync |
-| `README.md` | Avviso sullo scopo limitato del fork, link al compose e a questo documento |
-| `run.py`, `static/*`, `Src/*` | Sorgenti dell'applicazione mantenuti identici a upstream nel repository, salvo eventuali cambiamenti upstream |
+| `Dockerfile.ghcr` | AMD64 image build, Python dependencies, Tesseract, configuration setup, and packaging-only patching |
+| `Dockerfile.ghcr.dockerignore` | Dockerfile-specific build-context exclusions |
+| `docker-entrypoint.sh` | At first startup, copies the default configuration into the bind mount without overwriting later changes |
+| `docker-assets/patch_branding.py` | Rewrites image references and the manifest logo **inside the image** |
+| `docker-assets/pizza.png` | Historical pizza icon recovered by the user via Wayback Machine and resized for packaging |
+| `docker-assets/background.png` | Original 800×800 background recovered by the user; an optimized 256×256, three-color-palette PNG derivative to reduce image size. The original artwork is retained, but not its original image fidelity |
+| `compose.casaos.yml` | CasaOS Compose file with `x-casaos` metadata, bind mounts, and settings |
+| `.github/workflows/sync-upstream.yml` | Scheduled or manual fetch/merge from upstream |
+| `.github/workflows/publish-ghcr.yml` | PR builds; image build and GHCR push after changes to main, manual dispatch, or successful synchronization |
+| `README.md` | Notice about the fork's limited purpose and links to the Compose file and this document |
+| `run.py`, `static/*`, `Src/*` | Upstream application sources, kept unchanged in the fork unless upstream itself changes them |
 
-Storico: la PR #1 ha aggiunto la distribuzione Docker e CasaOS; la PR #2 introduce gli asset locali (pizza e sfondo) e la patch di branding.
+History: PR #1 added Docker and CasaOS packaging; PR #2 introduced locally hosted graphics (pizza icon and background) and the build-time branding patch.
 
-## 3. Scelte Docker
+## 3. Docker design decisions
 
-- Base `python:3.11-slim-bookworm`: Debian Slim/glibc per compatibilità con wheel binarie, soprattutto `curl_cffi` e `lxml`. Alpine è più piccola in astratto, ma potrebbe richiedere compilazioni e adattamenti musl; distroless aumenta la complessità con Tesseract.
-- `apt-get install --no-install-recommends tesseract-ocr ca-certificates`: Tesseract eseguibile necessario al progetto; `libtesseract-dev` non serve al runtime Python tramite `pytesseract`.
-- `pip install -r requirements.txt pytesseract`, senza cache persistente.
-- `COPY requirements.txt` prima del sorgente per riutilizzare cache delle dipendenze.
-- Porta applicativa 8080; la porta applicativa è letta dal `config.json` upstream (e può essere sovrascritta da `PORT_ENV` se supportato).
-- Immagine limitata a `linux/amd64` nel workflow Docker Buildx. Non è configurata una build ARM64.
-- Il container non viene automaticamente aggiornato quando GHCR modifica `latest`: occorre pull/ricreazione in CasaOS o uno strumento dedicato.
+- Base image: `python:3.11-slim-bookworm`. Debian Slim uses glibc, which is compatible with precompiled Python wheels, particularly for `curl_cffi` and `lxml`. Alpine might be smaller in isolation, but could require compilation and musl-specific workarounds; distroless would make Tesseract integration more complex.
+- `apt-get install --no-install-recommends tesseract-ocr ca-certificates`: the project needs the Tesseract executable; `libtesseract-dev` development headers are not needed at runtime when using `pytesseract`.
+- Install with `pip install -r requirements.txt pytesseract` without a persistent pip cache.
+- Copy `requirements.txt` before the rest of the sources to improve dependency-layer cache reuse.
+- Application port: 8080. The application obtains its listening port from the upstream `config.json` (and can override it using `PORT_ENV` when supported).
+- The Docker Buildx workflow targets `linux/amd64` only. No ARM64 build is configured.
+- Publishing a new `latest` image to GHCR does **not** update an already-running container. A pull and recreation through CasaOS or a dedicated updater are required.
 
-## 4. Configurazione persistente e primo avvio
+## 4. Persistent configuration and first startup
 
-L'applicazione upstream legge `/app/config.json`. Per non sovrascrivere il codice e non dover preparare un file sull'host:
+The upstream application reads `/app/config.json`. To preserve this interface without overwriting application code or requiring the host file to be created manually:
 
-1. Il Dockerfile copia la configurazione di default in `/app/defaults/config.json`.
-2. Elimina il file originale da `/app/config.json` e crea un **symlink** `/app/config.json -> /app/data/config.json`.
-3. Il Compose monta `/DATA/AppData/mammamia` sull'intera directory `/app/data`, senza coprire `/app` (che contiene i sorgenti).
-4. L'entrypoint crea `/app/data/config.json` copiando il default **solo se assente**, poi esegue `python run.py`.
-5. Agli aggiornamenti il file dell'host rimane intatto: eventuali nuove opzioni upstream non vengono automaticamente aggiunte a un config già esistente. Se upstream modifica lo schema JSON, verificare manualmente differenze e migrazione.
+1. The Dockerfile copies the original default configuration to `/app/defaults/config.json`.
+2. It removes `/app/config.json` and creates the **symbolic link** `/app/config.json -> /app/data/config.json`.
+3. Compose bind-mounts `/DATA/AppData/mammamia` onto `/app/data` without mounting over `/app`, which contains the application sources.
+4. The entrypoint creates `/app/data/config.json` from the default **only if it does not already exist**, then runs `python run.py`.
+5. Image updates preserve the host's configuration. New upstream settings are **not** automatically merged into an existing configuration; if upstream changes the JSON schema, compare the default file and migrate settings manually.
 
-L'entrypoint interrompe l'avvio se `/app/data/config.json` è una directory, per evitare un errore difficile da diagnosticare.
+The entrypoint aborts startup if `/app/data/config.json` is a directory, making an otherwise confusing error explicit.
 
-**Nota:** montare tutto `/DATA/AppData/mammamia:/app` nasconderebbe i sorgenti nell'immagine e impedirebbe l'avvio. Un bind di un *file* inesistente può diventare una directory e fallire; si monta dunque una directory dedicata.
+**Why a directory bind mount?** Mounting the entire host directory as `/DATA/AppData/mammamia:/app` would hide the source code bundled in the image, preventing startup. Bind-mounting an individual *nonexistent file* can instead cause Docker to create a directory at that path, which also fails. Therefore the deployment mounts a dedicated data directory.
 
-## 5. CasaOS
+## 5. CasaOS integration
 
-Nel `compose.casaos.yml`:
+`compose.casaos.yml` specifies:
 
-- `name: mammamia`, `services.mammamia`, `container_name: mammamia`, immagine `ghcr.io/lightwalker01/mammamia:latest`.
-- App ID esplicito: `x-casaos.store_app_id: lightwalker01-mammamia`. Titolo UI `MammaMia`; architettura `amd64`; porta 8080; `index: /configure`.
-- Icona e thumbnail CasaOS puntano all'asset PNG tracciato nel **fork GitHub** (CasaOS non può caricare icone da un'istanza locale non nota al momento dell'importazione). Le immagini dell'interfaccia interna vengono invece servite dal **container**.
-- Variabile `TMDB_KEY`: impostare un valore valido nell'interfaccia CasaOS, non nel repository. Variabile `TZ: Europe/Rome`.
-- `restart: unless-stopped`, `init: true`, `no-new-privileges:true`, rotazione dei log `json-file` con 10 MiB × 3.
-- Percorso dati: `/DATA/AppData/mammamia/config.json`; la collocazione effettiva del Compose su CasaOS dipende dalla versione e dalla procedura di import (`/var/lib/casaos/apps/...` è tipico ma non garantito dal solo `store_app_id`).
+- Compose project `name: mammamia`, service `services.mammamia`, explicit `container_name: mammamia`, and image `ghcr.io/lightwalker01/mammamia:latest`.
+- Explicit app identifier: `x-casaos.store_app_id: lightwalker01-mammamia`. Visible app name: `MammaMia`; architecture: `amd64`; port: 8080; launch path: `/configure`.
+- CasaOS icon and thumbnail use the PNG stored in the **GitHub fork** (CasaOS cannot rely on the URL of a local instance that is not known at import time). Internal web images, by contrast, are served by the **container**.
+- `TMDB_KEY`: set a valid value in CasaOS rather than committing it to the repository. The `TZ` environment variable is set to `Europe/Rome`.
+- `restart: unless-stopped`, `init: true`, `no-new-privileges:true`, and `json-file` log rotation (10 MiB × 3 files).
+- Persistent data: `/DATA/AppData/mammamia/config.json`. The actual location of the imported Compose file depends on the CasaOS release and import procedure. `/var/lib/casaos/apps/...` is common, but the exact directory name is not guaranteed by `store_app_id` alone.
 
-Da un server CasaOS non serve conservare un clone Git. Se il package GHCR è privato, serve autenticazione Docker; per pull anonimi impostarlo pubblico da GitHub Packages.
+The CasaOS host does not need a Git checkout. For anonymous pulls, make the GHCR package public in GitHub Packages; a private package requires Docker authentication.
 
-## 6. Asset grafici self-hosted e patch in fase di build
+## 6. Self-hosted graphics and build-time patching
 
-URL legacy in upstream:
+External upstream image URLs:
 
-- Pizza: `https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png` (ora restituisce AccessDenied).
-- Sfondo: `https://i.postimg.cc/ry3p76HY/italian-seamless-free-vector-pattern3.png`.
+- Pizza icon: `https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png` (now returns `AccessDenied`).
+- Background: `https://i.postimg.cc/ry3p76HY/italian-seamless-free-vector-pattern3.png`.
 
-La PR #2 conserva le immagini in `docker-assets`. Il pattern fornito originariamente in formato 800×800 è stato ridotto a un derivato 256×256 con quantizzazione a 3 colori per contenere la dimensione del repository; il motivo grafico è quello originale, ma la risoluzione e alcune sfumature cambiano.
+PR #2 preserves these images under `docker-assets`. The user-supplied original 800×800 background was downsampled to 256×256 and quantized to a three-color palette to keep the repository and container compact. The artwork is the original pattern, although resolution and some tonal detail are reduced.
 
-La PR #2 conserva le immagini in `docker-assets` e lancia `python3 /app/docker-assets/patch_branding.py` **dopo** `COPY . ./` nel Dockerfile. Modifica le copie già presenti nell'immagine, senza commit sui sorgenti upstream:
+After `COPY . ./`, `Dockerfile.ghcr` runs `python3 /app/docker-assets/patch_branding.py`. This modifies **only the files copied into the Docker image**, and never commits modifications to the upstream application sources:
 
-- `static/static.py` e `static/configure.py`: URL pizza -> `/icon.png`; background -> `/background.png`; tipo favicon -> `image/png`.
-- `static/uprot.html`: stessa sostituzione per la pagina Captcha.
-- `run.py`: aggiunta runtime delle route FastAPI `/icon.png` e `/background.png` via `FileResponse`.
-- Manifest Stremio: il campo `logo` diventa l'URL assoluto dell'istanza che ha ricevuto la richiesta, derivato da protocollo e host e dai forwarded headers del reverse proxy. Esempi: `http://192.168.1.20:8080/icon.png`, `https://mammamia.example.com/icon.png`.
-- CasaOS continua a usare un link RAW a `docker-assets/pizza.png` nel fork.
-- Le patch hanno controlli sugli elementi strutturali principali (`from fastapi.responses`, route `/configure`, funzione manifest), così una modifica upstream incompatibile può far fallire la build anziché produrre un'immagine errata.
+- `static/static.py` and `static/configure.py`: replace the pizza URL with `/icon.png`, the background URL with `/background.png`, and the favicon content type with `image/png`.
+- `static/uprot.html`: apply the same URL replacements to the CAPTCHA page.
+- `run.py`: add the FastAPI endpoints `/icon.png` and `/background.png` using `FileResponse`.
+- Stremio manifest: set the `logo` field to an absolute URL pointing at the **requesting instance**, built from its protocol/hostname and applicable reverse-proxy forwarding headers. Example values: `http://192.168.1.20:8080/icon.png` or `https://mammamia.example.com/icon.png`.
+- CasaOS still uses the GitHub Raw URL for `docker-assets/pizza.png`.
+- The patch checks significant structural anchors, such as the FastAPI response import, `/configure` route, and manifest function. Incompatible upstream refactoring can make the build fail rather than silently producing an incorrectly patched image.
 
-**Attenzione al reverse proxy:** l'host/protocollo dei forwarded headers devono essere impostati/filtrati dal proxy fidato, non presi ciecamente dal client pubblico. Stremio raggiunge `/icon.png` soltanto se raggiunge l'istanza stessa (un URL LAN non è accessibile fuori dalla LAN).
+**Reverse-proxy trust:** ensure forwarded host and protocol headers are set or sanitized by a trusted reverse proxy, rather than blindly accepting arbitrary values from Internet clients. Stremio can load `/icon.png` only when it can reach the instance; an IP address on a private LAN will not work outside that LAN.
 
-La patch è volutamente confinata alla presentazione e al manifest: non cambia i provider di streaming.
+The patch deliberately affects presentation and the manifest only; it does not change streaming providers or stream extraction behavior.
 
-## 7. Sincronizzazione upstream
+## 7. Upstream synchronization
 
-Il workflow `sync-upstream.yml` è schedulato con cron `23 3 * * *` (UTC), e avviabile manualmente. Esegue:
+The `sync-upstream.yml` workflow is scheduled using cron `23 3 * * *` (UTC), and can also be run manually. In essence it performs:
 
 ```sh
 git fetch upstream main
 git merge --no-edit upstream/main
-git push origin HEAD:main  # soltanto se c'è un nuovo commit
+git push origin HEAD:main  # only when there is a new commit
 ```
 
-Non usa `git reset --hard` né `git push --force`. Se upstream scompare o si verifica un conflitto, l'azione fallisce e lascia `main` invariato. I file specifici del fork non vengono cancellati intenzionalmente, ma non è garantita l'assenza di futuri conflitti se upstream aggiunge file negli stessi percorsi.
+It does not run `git reset --hard` or `git push --force`. If upstream disappears or merging creates a conflict, the workflow fails and leaves the fork's remote `main` untouched. Fork-specific files are not intentionally deleted, although conflicts remain possible if upstream later introduces files at the same paths.
 
-**Limitazione:** i fork GitHub non costituiscono un backup offsite indipendente. Per tollerare cancellazione o rimozione del fork, effettuare un mirror periodico `git clone --mirror` su un provider separato o backup privato. Se upstream sparisce, le build possono continuare usando il codice già conservato nel fork.
+**Backup limitation:** a GitHub fork is not an independent off-site backup. To guard against the fork itself being deleted or removed, periodically run `git clone --mirror` to a separate provider or private backup. If upstream disappears but the fork survives, images can still be built using the copy of the code retained in the fork.
 
-La precedente action ereditata `sync-build.yml`, con reset forzato e pubblicazione su un Docker Hub di terzi, e `update_domains.yml` sono state rimosse nella PR #1. La modifica dei domini può essere gestita direttamente dal container con il `config.json` persistente; l'endpoint `/update` di upstream usa un servizio esterno e può modificare il file.
+The previous inherited `sync-build.yml` workflow, which force-reset the branch and published to a third party's Docker Hub, and `update_domains.yml` were removed in PR #1. Domain updates can be managed via the container's persistent `config.json`; upstream's `/update` endpoint calls an external service and may modify this file.
 
-## 8. Build e pubblicazione su GHCR
+## 8. GHCR build and publishing pipeline
 
-`publish-ghcr.yml` si attiva su:
+`publish-ghcr.yml` runs on:
 
-- Push a `main`: pubblica immagine.
-- Pull request verso `main`: **compila senza push**, per verificare le dipendenze (non sono previsti smoke test).
-- `workflow_dispatch`: permette build/push manuale.
-- `workflow_run` dopo un sync riuscito: controlla il ramo aggiornato e pubblica.
+- Push to `main`: build and publish the image.
+- Pull request targeting `main`: **build without publishing**, to check dependency installation (no smoke tests are configured).
+- `workflow_dispatch`: manual build and publish.
+- Successful `workflow_run` event after an upstream sync: build and publish the updated branch.
 
-Quest'ultimo trigger è importante: i push fatti con `GITHUB_TOKEN` non avviano necessariamente un ulteriore workflow `push`. Il job di pubblicazione utilizza `packages: write`, login GHCR con `GITHUB_TOKEN`, `docker/build-push-action` e cache `type=gha`.
+The last trigger matters because a push performed using `GITHUB_TOKEN` does not necessarily start another workflow via `push`. The publishing job has `packages: write`, logs into GHCR with `GITHUB_TOKEN`, uses `docker/build-push-action`, and caches build layers with `type=gha`.
 
-Tag immagine: `ghcr.io/lightwalker01/mammamia:latest` e `ghcr.io/lightwalker01/mammamia:sha-<12caratteri>`. Il tag SHA consente un rollback a una specifica versione se ancora presente nel registry; `latest` è mutabile e non equivale ad aggiornamento automatico del container.
+Image tags: `ghcr.io/lightwalker01/mammamia:latest` and `ghcr.io/lightwalker01/mammamia:sha-<12-character-revision>`. A SHA tag allows rollback to a specific version if the registry retains it; the mutable `latest` tag does not automatically update running containers.
 
-Il workflow pubblica su una registry raggiungibile via Internet; nessuna chiave TMDB viene inserita nell'immagine.
+The workflow publishes to an Internet-accessible registry but never bakes the TMDB API key into the image.
 
-## 9. Procedura di ricostruzione da zero
+## 9. Rebuilding the entire setup from scratch
 
-Prerequisiti: account GitHub con fork/sorgenti, GitHub Actions abilitato, permessi `contents: write` per sync e `packages: write` per GHCR, host CasaOS `linux/amd64`, Docker, chiave API TMDB.
+Prerequisites: a GitHub account with the fork/source history, enabled GitHub Actions, `contents: write` permissions for synchronization and `packages: write` for GHCR, a `linux/amd64` CasaOS host running Docker, and a TMDB API key.
 
-1. Forkare `UrloMythus/MammaMia` (oppure recuperare un backup dei sorgenti e della storia Git).
-2. Aggiungere tutti i file specificati nella sezione 2, prendendoli da questo fork/commit. Non sostituire permanentemente il codice upstream in `run.py` o `static/`.
-3. Abilitare i workflow GitHub Actions. Eseguire il workflow di pubblicazione su `main`; verificare su Actions che la build finisca e il package sia creato.
-4. Rendere pubblico il package GHCR se CasaOS deve effettuare pull anonimi.
-5. In CasaOS importare `compose.casaos.yml`, impostare `TMDB_KEY` reale e verificare che porta 8080 sia libera; se necessario cambiarne la porta **pubblicata**.
-6. Avviare il container e verificare `/configure`, `/icon.png`, `/background.png`, `/manifest.json` (quest'ultimo può reindirizzare al manifest parametrizzato).
-7. Controllare `/DATA/AppData/mammamia/config.json` creato automaticamente; salvare una copia per backup.
-8. Negli aggiornamenti ricreare il container dopo un nuovo pull dell'immagine, preservando il bind mount. Aggiornamenti tramite CasaOS o `docker compose pull && docker compose up -d` dal percorso Compose appropriato.
+1. Fork `UrloMythus/MammaMia`, or restore the source and Git history from a backup.
+2. Add all packaging files listed in section 2, copying them from this fork or its commits. Do not permanently rewrite the upstream `run.py` or `static/` files.
+3. Enable GitHub Actions. Trigger the publish workflow on `main`; check that the Actions build succeeds and creates a GHCR package.
+4. Make the package public if CasaOS will perform anonymous pulls.
+5. Import `compose.casaos.yml` into CasaOS, set a real `TMDB_KEY` value, and confirm host port 8080 is available. Change the **published** host port if required.
+6. Start the container and check `/configure`, `/icon.png`, `/background.png`, and `/manifest.json` (the latter may redirect to a parameterized manifest).
+7. Verify that `/DATA/AppData/mammamia/config.json` was created automatically; back it up.
+8. After future image updates, pull the new image and recreate the container while preserving the bind mount. Use the CasaOS UI or run `docker compose pull && docker compose up -d` from the directory holding the applicable Compose file.
 
-## 10. Verifiche diagnostiche
+## 10. Diagnostics and troubleshooting
 
 ```sh
 docker ps --filter name=mammamia
 docker logs --tail=100 mammamia
 docker inspect mammamia --format '{{ .Config.Image }}'
-curl -I http://IP_DEL_SERVER:8080/icon.png
-curl -I http://IP_DEL_SERVER:8080/background.png
+curl -I http://YOUR_SERVER_IP:8080/icon.png
+curl -I http://YOUR_SERVER_IP:8080/background.png
 ```
 
-`curl -I` usa HEAD: se un endpoint FastAPI accetta soltanto GET potrebbe rispondere 405; in quel caso verificare con `curl -o /dev/null -w '%{http_code}' http://IP_DEL_SERVER:8080/icon.png`. Per il manifest seguire i redirect.
+`curl -I` sends an HTTP HEAD request. If a FastAPI endpoint only accepts GET, it might return 405; in that case use `curl -o /dev/null -w '%{http_code}' http://YOUR_SERVER_IP:8080/icon.png` instead. Follow redirects when checking the manifest.
 
-- **Icona CasaOS assente:** controllare l'URL Raw GitHub e la cache della UI CasaOS. Può essere necessario aggiornare/reimportare il Compose o svuotare la cache.
-- **Icona web assente:** verificare `/icon.png` dal browser del client e gli errori di rete del browser; verificare che l'immagine Docker sia aggiornata.
-- **Config non presente:** controllare permessi del bind mount e log dello script entrypoint.
-- **Sync fallita:** leggere il log del workflow e risolvere manualmente il conflitto sul fork, senza forzare la storia.
-- **Build fallita:** possibili nuove versioni/strutture upstream, dipendenze Python, cambiamenti delle ancore dello script branding.
-- **Manifest con URL sbagliato:** verificare host, `X-Forwarded-Proto`, `X-Forwarded-Host` e configurazione del reverse proxy.
-- **Package non scaricabile da CasaOS:** controllare visibilità GHCR e autenticazione.
+- **CasaOS icon is missing:** verify the GitHub Raw URL and CasaOS UI cache. Refreshing or reimporting Compose metadata, or clearing the relevant cache, may be required.
+- **Web icon is missing:** request `/icon.png` in a client browser and inspect the browser's network errors; also check that the running container uses the updated image.
+- **Configuration is missing:** inspect bind-mount permissions and the entrypoint logs.
+- **Synchronization fails:** review the GitHub Actions log and resolve any fork-side merge conflict manually, without rewriting history.
+- **Build fails:** examine changed upstream file layout, updated Python dependencies, and changes to the branding script's anchor text.
+- **Manifest contains the wrong URL:** inspect Host, `X-Forwarded-Proto`, `X-Forwarded-Host`, and the reverse-proxy setup.
+- **CasaOS cannot pull the package:** inspect GHCR visibility and Docker authentication.
 
-## 11. Limiti e decisioni di sicurezza
+## 11. Security decisions and limitations
 
-- Questo packaging non rende offline il servizio: metadata, provider, EPG, immagini dei canali TV e flussi multimediali possono continuare a usare siti remoti.
-- Non sono inclusi database o volumi aggiuntivi; solo la configurazione è persistente secondo l'attuale codice.
-- Si consiglia di esporre verso Internet soltanto tramite reverse proxy HTTPS opportunamente configurato. Non usare l'endpoint `/update` su una porta pubblica senza valutarne la protezione.
-- La pubblicazione automatica di commit upstream implica fiducia nei manutentori e nelle dipendenze: un aggiornamento può cambiare comportamenti o rompere l'app. Controllare gli esiti GitHub Actions e conservare tag SHA.
-- Per la ridistribuzione degli asset recuperati via archivio verificare la licenza del materiale originale. La presenza sul progetto upstream o su Wayback non prova una licenza di redistribuzione.
-- L'immagine viene compilata ma non avviata in CI; lo smoke test è stato escluso per scelta dell'utente, che effettua verifica manuale su CasaOS.
+- The packaging does not make the service offline. Metadata providers, EPG services, TV-channel images, streaming providers, and video streams can still contact external websites.
+- There are no additional databases or data volumes. The configuration file is the only persisted resource under the current application design.
+- If the service must be accessible from the Internet, use a correctly configured HTTPS reverse proxy. Assess the security implications of the upstream `/update` endpoint before exposing it publicly.
+- Automatically building upstream commits requires trust in maintainers and dependencies. Updates can change behavior or break functionality. Monitor GitHub Actions results and keep SHA-tagged images for rollback.
+- Verify the original asset licenses before redistributing images retrieved from archives. Their presence in upstream or on Wayback Machine does not prove that redistribution is permitted.
+- CI compiles the image but does not launch it. Smoke testing was intentionally excluded: the owner performs manual verification on CasaOS.
 
-## 12. Riferimenti
+## 12. References
 
-- [Upstream](https://github.com/UrloMythus/MammaMia)
-- [Fork dedicato al container](https://github.com/lightwalker01/MammaMia)
-- [GHCR Packages](https://github.com/lightwalker01?tab=packages)
-- [PR #1](https://github.com/lightwalker01/MammaMia/pull/1) — infrastruttura Docker/CasaOS
-- [PR #2](https://github.com/lightwalker01/MammaMia/pull/2) — asset grafici locali
-- [CasaOS app-management source](https://github.com/IceWhaleTech/CasaOS-AppManagement)
-- [Docker Compose reference](https://docs.docker.com/reference/compose-file/)
+- [Upstream repository](https://github.com/UrloMythus/MammaMia)
+- [Container packaging fork](https://github.com/lightwalker01/MammaMia)
+- [GHCR packages](https://github.com/lightwalker01?tab=packages)
+- [PR #1](https://github.com/lightwalker01/MammaMia/pull/1) — Docker/CasaOS infrastructure
+- [PR #2](https://github.com/lightwalker01/MammaMia/pull/2) — locally hosted graphics
+- [CasaOS AppManagement source](https://github.com/IceWhaleTech/CasaOS-AppManagement)
+- [Docker Compose file reference](https://docs.docker.com/reference/compose-file/)

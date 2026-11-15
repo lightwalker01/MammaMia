@@ -21,7 +21,7 @@
 | `docker-entrypoint.sh` | Primo avvio: copia il config di default nel bind mount, senza sovrascrivere modifiche successive |
 | `docker-assets/patch_branding.py` | Riscrive, **nell'immagine**, i riferimenti alle immagini e il logo del manifest |
 | `docker-assets/pizza.png` | Icona della pizza storica, recuperata dall'utente tramite Wayback Machine e ridimensionata per il packaging |
-| `docker-assets/background.png` | Sfondo originale recuperato dall'utente; versione ottimizzata per il container |
+| `docker-assets/background.png` | Sfondo originale 800×800 recuperato dall'utente; derivato PNG 256×256 con palette a 3 colori per ridurre la dimensione dell'immagine. Si conserva il disegno originale, non la qualità originale |
 | `compose.casaos.yml` | Compose per CasaOS, con metadati `x-casaos`, bind mount e impostazioni |
 | `.github/workflows/sync-upstream.yml` | Fetch/merge giornaliero o manuale da upstream |
 | `.github/workflows/publish-ghcr.yml` | Build su PR; build + push GHCR dopo modifiche a main, dispatch o sync |
@@ -73,6 +73,8 @@ URL legacy in upstream:
 
 - Pizza: `https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png` (ora restituisce AccessDenied).
 - Sfondo: `https://i.postimg.cc/ry3p76HY/italian-seamless-free-vector-pattern3.png`.
+
+La PR #2 conserva le immagini in `docker-assets`. Il pattern fornito originariamente in formato 800×800 è stato ridotto a un derivato 256×256 con quantizzazione a 3 colori per contenere la dimensione del repository; il motivo grafico è quello originale, ma la risoluzione e alcune sfumature cambiano.
 
 La PR #2 conserva le immagini in `docker-assets` e lancia `python3 /app/docker-assets/patch_branding.py` **dopo** `COPY . ./` nel Dockerfile. Modifica le copie già presenti nell'immagine, senza commit sui sorgenti upstream:
 

@@ -9,7 +9,7 @@ for filename in ("static/static.py", "static/configure.py", "static/uprot.html")
     path = ROOT / filename
     source = path.read_text(encoding="utf-8")
     source = source.replace(OLD_ICON, "/icon.png")
-    source = source.replace(OLD_BACKGROUND, "/background.svg")
+    source = source.replace(OLD_BACKGROUND, "/background.png")
     source = source.replace('href="/icon.png" type="image/x-icon"', 'href="/icon.png" type="image/png"')
     path.write_text(source, encoding="utf-8")
 
@@ -27,9 +27,9 @@ routes = """@app.get('/icon.png', include_in_schema=False)
 def local_icon():
     return FileResponse('/app/docker-assets/pizza.png', media_type='image/png')
 
-@app.get('/background.svg', include_in_schema=False)
+@app.get('/background.png', include_in_schema=False)
 def local_background():
-    return FileResponse('/app/docker-assets/background.svg', media_type='image/svg+xml')
+    return FileResponse('/app/docker-assets/background.png', media_type='image/png')
 
 """
 source = source.replace(anchor, routes + anchor, 1)

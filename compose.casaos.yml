@@ -47,6 +47,7 @@ services:
             it_it: Cartella di configurazione persistente. config.json viene creato automaticamente dall'immagine al primo avvio e conservato negli aggiornamenti.
 
 x-casaos:
+  store_app_id: lightwalker01-mammamia
   main: mammamia
   architectures:
     - amd64

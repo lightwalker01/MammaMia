@@ -8,12 +8,16 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - "8080:8080"
+      - target: 8080
+        published: "8080"
+        protocol: tcp
     environment:
       TZ: Europe/Rome
-      TMDB_KEY: ${TMDB_KEY:?Set TMDB_KEY in CasaOS or .env}
+      TMDB_KEY: "CHANGE_ME_TMDB_KEY"
     volumes:
-      - /DATA/AppData/mammamia/config.json:/app/config.json
+      - type: bind
+        source: /DATA/AppData/mammamia/config.json
+        target: /app/config.json
     security_opt:
       - no-new-privileges:true
     logging:
@@ -21,3 +25,59 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    x-casaos:
+      envs:
+        - container: TMDB_KEY
+          description:
+            en_us: TMDB API key (required). Replace CHANGE_ME_TMDB_KEY before installation.
+            it_it: Chiave API TMDB obbligatoria. Sostituisci CHANGE_ME_TMDB_KEY prima di installare.
+        - container: TZ
+          description:
+            en_us: Time zone used by the application.
+            it_it: Fuso orario utilizzato dall'applicazione.
+      ports:
+        - container: "8080"
+          description:
+            en_us: MammaMia web interface and Stremio add-on API.
+            it_it: Interfaccia web MammaMia e API dell'addon Stremio.
+      volumes:
+        - container: /app/config.json
+          description:
+            en_us: Persistent config.json file. Create /DATA/AppData/mammamia/config.json from the upstream example before installing.
+            it_it: File config.json persistente. Crealo in /DATA/AppData/mammamia/config.json copiando quello originale prima dell'installazione.
+
+x-casaos:
+  main: mammamia
+  architectures:
+    - amd64
+  developer: UrloMythus
+  author: lightwalker01 (unofficial container packaging)
+  category: Media
+  icon: https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png
+  thumbnail: https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png
+  title:
+    en_us: MammaMia
+    it_it: MammaMia
+  tagline:
+    en_us: Self-hosted Italian Stremio add-on
+    it_it: Addon Stremio italiano self-hosted
+  description:
+    en_us: >
+      Unofficial AMD64 Docker package of UrloMythus/MammaMia.
+      This fork only keeps upstream sources synchronized and publishes an updated image on GHCR.
+    it_it: >
+      Container Docker AMD64 non ufficiale di UrloMythus/MammaMia.
+      Questo fork sincronizza esclusivamente i sorgenti originali e pubblica un'immagine aggiornata su GHCR.
+  tips:
+    before_install:
+      en_us: >
+        Before installing, create /DATA/AppData/mammamia/config.json by copying config.json
+        from https://github.com/UrloMythus/MammaMia and replace CHANGE_ME_TMDB_KEY with your TMDB API key.
+        The GHCR package must be public (or Docker logged in) for the image to be pulled.
+      it_it: >
+        Prima di installare, crea /DATA/AppData/mammamia/config.json copiando il file config.json
+        da https://github.com/UrloMythus/MammaMia e sostituisci CHANGE_ME_TMDB_KEY con la tua API key TMDB.
+        Il pacchetto GHCR deve essere pubblico (oppure Docker deve essere autenticato).
+  webui_port: 8080
+  index: /configure
+  port_map: "8080"

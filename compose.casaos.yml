@@ -16,8 +16,8 @@ services:
       TMDB_KEY: "CHANGE_ME_TMDB_KEY"
     volumes:
       - type: bind
-        source: /DATA/AppData/mammamia/config.json
-        target: /app/config.json
+        source: /DATA/AppData/mammamia
+        target: /app/data
     security_opt:
       - no-new-privileges:true
     logging:
@@ -41,10 +41,10 @@ services:
             en_us: MammaMia web interface and Stremio add-on API.
             it_it: Interfaccia web MammaMia e API dell'addon Stremio.
       volumes:
-        - container: /app/config.json
+        - container: /app/data
           description:
-            en_us: Persistent config.json file. Create /DATA/AppData/mammamia/config.json from the upstream example before installing.
-            it_it: File config.json persistente. Crealo in /DATA/AppData/mammamia/config.json copiando quello originale prima dell'installazione.
+            en_us: Persistent configuration directory. config.json is created automatically from the image on first start and retained on updates.
+            it_it: Cartella di configurazione persistente. config.json viene creato automaticamente dall'immagine al primo avvio e conservato negli aggiornamenti.
 
 x-casaos:
   main: mammamia
@@ -71,13 +71,15 @@ x-casaos:
   tips:
     before_install:
       en_us: >
-        Before installing, create /DATA/AppData/mammamia/config.json by copying config.json
-        from https://github.com/UrloMythus/MammaMia and replace CHANGE_ME_TMDB_KEY with your TMDB API key.
-        The GHCR package must be public (or Docker logged in) for the image to be pulled.
+        Replace CHANGE_ME_TMDB_KEY with your TMDB API key before installing.
+        The configuration file will be initialized automatically in /DATA/AppData/mammamia/config.json
+        at first startup, then preserved on subsequent updates. The GHCR package must be public
+        (or Docker logged in) for the image to be pulled.
       it_it: >
-        Prima di installare, crea /DATA/AppData/mammamia/config.json copiando il file config.json
-        da https://github.com/UrloMythus/MammaMia e sostituisci CHANGE_ME_TMDB_KEY con la tua API key TMDB.
-        Il pacchetto GHCR deve essere pubblico (oppure Docker deve essere autenticato).
+        Prima di installare sostituisci CHANGE_ME_TMDB_KEY con la tua API key TMDB.
+        Il file /DATA/AppData/mammamia/config.json verrà creato automaticamente al primo avvio
+        e conservato negli aggiornamenti. Il pacchetto GHCR deve essere pubblico
+        (oppure Docker deve essere autenticato).
   webui_port: 8080
   index: /configure
   port_map: "8080"

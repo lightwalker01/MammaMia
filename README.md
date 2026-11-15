@@ -7,6 +7,14 @@
 > Image (after a successful build): `ghcr.io/lightwalker01/mammamia:latest`. [CasaOS Compose](compose.casaos.yml). Builds use the source retained in this fork, so they remain possible if upstream becomes unavailable. Images are not installed or updated automatically on CasaOS. At first start, the image initializes `/DATA/AppData/mammamia/config.json` automatically via the bind-mounted `/app/data` directory; subsequent starts preserve user edits. Set `TMDB_KEY` in CasaOS before installation. A GitHub fork is not an independent external backup.
 
 
+### Fork technical design and recovery
+
+See [Docker & CasaOS technical architecture](docs/DOCKER-CASAOS-ARCHITECTURE.md) for the rationale, synchronization rules, image-building pipeline, CasaOS installation, persistent configuration, security notes, troubleshooting, and complete reconstruction steps.
+
+### Self-hosted branding assets
+
+The Docker image bundles the historical pizza icon (provided from an archived copy) and the **original Italian-pattern background recovered by the user**, in an optimized 256×256, 3-color PNG derivative. Build-time patching replaces the Creazilla image URL and Postimg background references **inside the container image only**. The forked upstream application sources remain unchanged. The web UI serves `/icon.png` and `/background.png`; the Stremio manifest advertises a logo URL derived from the incoming request (including the reverse proxy's forwarded host/protocol when present). CasaOS uses the image stored in this fork. For security, configure your reverse proxy to sanitize forwarded headers.
+
   
 
   

@@ -54,8 +54,8 @@ x-casaos:
   developer: UrloMythus
   author: lightwalker01 (unofficial container packaging)
   category: Media
-  icon: https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png
-  thumbnail: https://creazilla-store.fra1.digitaloceanspaces.com/emojis/49647/pizza-emoji-clipart-md.png
+  icon: https://raw.githubusercontent.com/lightwalker01/MammaMia/main/docker-assets/pizza.png
+  thumbnail: https://raw.githubusercontent.com/lightwalker01/MammaMia/main/docker-assets/pizza.png
   title:
     en_us: MammaMia
     it_it: MammaMia

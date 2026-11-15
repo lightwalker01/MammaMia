@@ -4,7 +4,7 @@
 >
 > Questo fork ha come **unico scopo** mantenere sincronizzati i sorgenti originali e pubblicare un container Docker aggiornato. Non è un fork di sviluppo e non intende sostituire il progetto originale.
 >
-> Image (after a successful build): `ghcr.io/lightwalker01/mammamia:latest`. [CasaOS Compose](compose.casaos.yml). Builds use the source retained in this fork, so they remain possible if upstream becomes unavailable. Images are not installed or updated automatically on CasaOS. A GitHub fork is not an independent external backup.
+> Image (after a successful build): `ghcr.io/lightwalker01/mammamia:latest`. [CasaOS Compose](compose.casaos.yml). Builds use the source retained in this fork, so they remain possible if upstream becomes unavailable. Images are not installed or updated automatically on CasaOS. At first start, the image initializes `/DATA/AppData/mammamia/config.json` automatically via the bind-mounted `/app/data` directory; subsequent starts preserve user edits. Set `TMDB_KEY` in CasaOS before installation. A GitHub fork is not an independent external backup.
 
 
   

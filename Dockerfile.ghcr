@@ -15,5 +15,12 @@ RUN python -m pip install --no-cache-dir -r requirements.txt pytesseract
 
 COPY . ./
 
+# Keep the default config in the image and expose a stable path for persistent data.
+RUN mkdir -p /app/defaults /app/data \
+    && cp /app/config.json /app/defaults/config.json \
+    && rm /app/config.json \
+    && ln -s /app/data/config.json /app/config.json
+
 EXPOSE 8080
+ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]
 CMD ["python", "run.py"]
